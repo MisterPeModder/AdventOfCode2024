@@ -82,10 +82,10 @@ fn runSetupFunction(comptime DataType: type, setup_fn: ?AocSetupFn(DataType), al
 
         var timer = Timer.start() catch abort();
         const result = f(allocator, input) catch |err| {
-            aoc_log.err("Setup function failed in {}ms: {}", .{ timer.read() / 1_000_000, err });
+            aoc_log.err("Setup function failed in {}µs: {}", .{ readTimeUs(&timer), err });
             return err;
         };
-        aoc_log.info("Setup function completed in {}ms", .{timer.read() / 1_000_000});
+        aoc_log.info("Setup function completed in {}µs", .{readTimeUs(&timer)});
         return result;
     } else if (DataType == []const u8) {
         aoc_log.info("No setup to perform", .{});
@@ -101,13 +101,17 @@ fn runSolutionFunction(comptime DataType: type, solution_fn: ?AocSolutionFn(Data
 
         var timer = Timer.start() catch abort();
         const result = f(allocator, data) catch |err| {
-            aoc_log.err("Part {d} failed in {}ms: {}", .{ part, timer.read() / 1_000_000, err });
+            aoc_log.err("Part {d} failed in {}µs: {}", .{ part, readTimeUs(&timer), err });
             return err;
         };
-        aoc_log.info("Part {d} completed in {}ms => {d}", .{ part, timer.read() / 1_000_000, result });
+        aoc_log.info("Part {d} completed in {}µs => {d}", .{ part, readTimeUs(&timer), result });
     } else {
         aoc_log.warn("No solution provided for part {d}", .{part});
     }
+}
+
+fn readTimeUs(timer: *Timer) u64 {
+    return timer.read() / 1_000;
 }
 
 const JsonConfig = struct {

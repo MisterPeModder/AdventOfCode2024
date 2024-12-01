@@ -12,6 +12,8 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .test_step = test_step,
     };
+
+    addSolution(ab, "day01");
 }
 
 const AocBuild = struct {
