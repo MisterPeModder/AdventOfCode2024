@@ -1,3 +1,17 @@
+//! Advent of Code Runner.
+//! This file is responsible for downloading the input for a given year and day,
+//! then running the aocSetup, aocPart1, and aocPart2 functions from the root module.
+//!
+//! The root module *must* have the following public fields:
+//! - AOC_YEAR: u32
+//! - AOC_DAY: u32
+//! - AocData: type
+//!
+//! The root module may have the following public functions:
+//! - aocSetup: fn (Allocator, []const u8) anyerror!AocData
+//! - aocPart1: fn (Allocator, AocData) anyerror!u32
+//! - aocPart2: fn (Allocator, AocData) anyerror!u32
+
 const std = @import("std");
 const fs = std.fs;
 const json = std.json;
@@ -115,7 +129,7 @@ fn readTimeUs(timer: *Timer) u64 {
 }
 
 const JsonConfig = struct {
-    token: []const u8,
+    token: []const u8 = "",
 };
 
 fn getInput(allocator: Allocator, year: u32, day: u32, input: *ArrayList(u8)) !void {
@@ -188,10 +202,14 @@ fn getToken(allocator: Allocator) ![]const u8 {
 
     var file = cwd.openFile(".aoc/config.json", .{ .mode = .read_only }) catch |err| switch (err) {
         fs.File.OpenError.FileNotFound => {
-            createDefaultJsonConfig() catch {
-                aoc_log.err("Failed to create default JSON config: {}", .{err});
+            const new_config = JsonConfig{
+                .token = try getTokenFromStdin(allocator),
             };
-            return error.MissingConfiguration;
+            writeJsonConfig(new_config) catch |e| {
+                aoc_log.err("Failed to write JSON config: {}", .{err});
+                return e;
+            };
+            return new_config.token;
         },
         else => return err,
     };
@@ -212,6 +230,19 @@ fn getToken(allocator: Allocator) ![]const u8 {
     return parsed.value.token;
 }
 
+fn getTokenFromStdin(allocator: Allocator) ![]const u8 {
+    const stdin = std.io.getStdIn();
+
+    while (true) {
+        try std.io.getStdOut().writeAll("Please enter your AOC session token: ");
+        if (try stdin.reader().readUntilDelimiterOrEofAlloc(allocator, '\n', std.math.maxInt(usize))) |token| {
+            if (token.len > 0) {
+                return token;
+            }
+        }
+    }
+}
+
 fn storeInputInCache(allocator: Allocator, year: u32, day: u32, input: []const u8) !void {
     var aoc_dir = try fs.cwd().makeOpenPath(".aoc", .{});
     defer aoc_dir.close();
@@ -225,14 +256,12 @@ fn storeInputInCache(allocator: Allocator, year: u32, day: u32, input: []const u
     try file.writer().writeAll(input);
 }
 
-fn createDefaultJsonConfig() !void {
+fn writeJsonConfig(config: JsonConfig) !void {
     var aoc_dir = try fs.cwd().makeOpenPath(".aoc", .{});
     defer aoc_dir.close();
 
     var file = try aoc_dir.createFile("config.json", .{});
     defer file.close();
 
-    try json.stringify(JsonConfig{
-        .token = "",
-    }, .{ .whitespace = .indent_2 }, file.writer());
+    try json.stringify(config, .{ .whitespace = .indent_2 }, file.writer());
 }
