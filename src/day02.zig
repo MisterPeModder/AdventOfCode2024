@@ -46,31 +46,30 @@ pub fn aocSetup(allocator: Allocator, input: []const u8) anyerror!AocData {
 pub fn aocPart1(allocator: Allocator, reports: AocData) anyerror!u32 {
     _ = allocator;
     var valid_reports: u32 = 0;
-    outer: for (reports) |report| {
-        var increasing = true;
-        for (1..report.len) |i| {
-            const curr = report[i];
-            const prev = report[i - 1];
-            const diff = @abs(@max(curr, prev) - @min(curr, prev));
-
-            if (diff < 1 or diff > 3) {
-                continue :outer;
-            }
-            if (i == 1) {
-                increasing = curr > prev;
-            } else if ((increasing and curr <= prev) or (!increasing and curr >= prev)) {
-                continue :outer;
-            }
+    for (reports) |report| {
+        if (isSafe(report, null)) {
+            valid_reports += 1;
         }
-        valid_reports += 1;
     }
     return valid_reports;
 }
 
-pub fn aocPart2(allocator: Allocator, data: AocData) anyerror!u32 {
+pub fn aocPart2(allocator: Allocator, reports: AocData) anyerror!u32 {
     _ = allocator;
-    _ = data;
-    return 1;
+    var valid_reports: u32 = 0;
+    for (reports) |report| {
+        if (isSafe(report, null) or isSafe(report[1..], null)) {
+            valid_reports += 1;
+            continue;
+        }
+        for (1..report.len) |i| {
+            if (isSafe(report, i)) {
+                valid_reports += 1;
+                break;
+            }
+        }
+    }
+    return valid_reports;
 }
 
 pub fn main() !void {
@@ -91,6 +90,33 @@ fn countLines(input: []const u8) usize {
     return count;
 }
 
+fn isSafe(report: []u32, skip_idx: ?usize) bool {
+    var increasing = true;
+    var prev: u32 = report[0];
+    var first = true;
+
+    for (1..report.len) |i| {
+        if (skip_idx != null and i == skip_idx.?) {
+            continue;
+        }
+
+        const curr = report[i];
+        const diff = @abs(@max(curr, prev) - @min(curr, prev));
+
+        const valid_diff = diff > 0 and diff < 4;
+        const monotonic = first or (increasing == (curr > prev));
+
+        if (valid_diff and monotonic) {
+            increasing = curr > prev;
+            prev = curr;
+            first = false;
+        } else {
+            return false;
+        }
+    }
+    return true;
+}
+
 test "aoc 2024, day 02 example" {
     const example =
         \\7 6 4 2 1
@@ -107,4 +133,16 @@ test "aoc 2024, day 02 example" {
 
     const data: AocData = try aocSetup(allocator, example);
     try expect(2 == try aocPart1(allocator, data));
+    try expect(4 == try aocPart2(allocator, data));
+}
+
+test "aoc 2024, day 02 edge case" {
+    const example = "30 26 27 26 23";
+
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    const data: AocData = try aocSetup(allocator, example);
+    try expect(1 == try aocPart2(allocator, data));
 }
