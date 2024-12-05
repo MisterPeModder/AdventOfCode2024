@@ -17,6 +17,7 @@ pub fn build(b: *std.Build) void {
     addSolution(ab, "day02");
     addSolution(ab, "day03");
     addSolution(ab, "day04");
+    addSolution(ab, "day05");
 }
 
 const AocBuild = struct {
