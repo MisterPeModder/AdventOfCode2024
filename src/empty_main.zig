@@ -3,6 +3,12 @@ const aoc = @import("aoc.zig");
 
 const Allocator = std.mem.Allocator;
 
+const expect = std.testing.expect;
+
+pub const std_options = .{
+    .log_level = .info,
+};
+
 pub const AOC_YEAR: u32 = 2024;
 pub const AOC_DAY: u32 = 1;
 pub const AocData = struct { data: u32 };
